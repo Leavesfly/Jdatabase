@@ -5,6 +5,7 @@ import com.jdatabase.common.Schema;
 import com.jdatabase.common.Tuple;
 import com.jdatabase.common.Types;
 import com.jdatabase.common.Value;
+import com.jdatabase.index.IndexManager;
 import com.jdatabase.parser.ast.Expression;
 import com.jdatabase.parser.ast.SelectStatement;
 import com.jdatabase.storage.StorageManager;
@@ -28,7 +29,8 @@ public class OperatorTest {
     @BeforeEach
     void setUp(@TempDir Path tempDir) {
         Catalog catalog = new Catalog(tempDir.toString());
-        storageManager = new StorageManager(catalog);
+        IndexManager indexManager = new IndexManager(tempDir.toString());
+        storageManager = new StorageManager(catalog, indexManager);
         
         // 创建测试表
         List<Schema.Column> columns = new ArrayList<>();

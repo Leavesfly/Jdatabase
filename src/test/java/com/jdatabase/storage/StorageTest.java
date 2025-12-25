@@ -5,6 +5,7 @@ import com.jdatabase.common.Schema;
 import com.jdatabase.common.Tuple;
 import com.jdatabase.common.Types;
 import com.jdatabase.common.Value;
+import com.jdatabase.index.IndexManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,7 +26,8 @@ public class StorageTest {
     @BeforeEach
     void setUp(@TempDir Path tempDir) {
         this.catalog = new Catalog(tempDir.toString());
-        this.storageManager = new StorageManager(catalog);
+        IndexManager indexManager = new IndexManager(tempDir.toString());
+        this.storageManager = new StorageManager(catalog, indexManager);
     }
 
     @Test

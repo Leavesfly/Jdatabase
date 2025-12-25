@@ -29,7 +29,13 @@ public class SQLParser {
 
     private Statement parseStatement() {
         if (match(TokenType.CREATE)) {
-            return parseCreateTable();
+            if (match(TokenType.TABLE)) {
+                return parseCreateTable();
+            } else if (match(TokenType.INDEX)) {
+                return parseCreateIndex();
+            } else {
+                throw new RuntimeException("Expected TABLE or INDEX after CREATE, got: " + currentToken);
+            }
         } else if (match(TokenType.INSERT)) {
             return parseInsert();
         } else if (match(TokenType.SELECT)) {
@@ -43,9 +49,19 @@ public class SQLParser {
         }
     }
 
+    private CreateIndexStatement parseCreateIndex() {
+        // CREATE INDEX 已经匹配
+        expectIdentifier(); // 索引名（可选，这里简化处理，忽略）
+        expect(TokenType.ON);
+        String tableName = expectIdentifier();
+        expect(TokenType.LPAREN);
+        String columnName = expectIdentifier();
+        expect(TokenType.RPAREN);
+        return new CreateIndexStatement(tableName, columnName);
+    }
+
     private CreateTableStatement parseCreateTable() {
-        expect(TokenType.CREATE);
-        expect(TokenType.TABLE);
+        // CREATE TABLE 已经匹配
         String tableName = expectIdentifier();
         expect(TokenType.LPAREN);
         

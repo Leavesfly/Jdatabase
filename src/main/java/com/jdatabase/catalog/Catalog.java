@@ -16,9 +16,11 @@ import java.util.Map;
  */
 public class Catalog {
     private static final String CATALOG_FILE = "catalog.dat";
+    private static final String INDEX_CATALOG_FILE = "index_catalog.dat";
     private final PageManager pageManager;
     private final RecordManager recordManager;
     private final Map<String, Schema> schemas;
+    private final Map<String, String> indexes; // key: "tableName.columnName"
     private final String dataDir;
 
     public Catalog(String dataDir) {
@@ -26,7 +28,9 @@ public class Catalog {
         this.pageManager = new PageManager(dataDir);
         this.recordManager = new RecordManager(pageManager);
         this.schemas = new HashMap<>();
+        this.indexes = new HashMap<>();
         loadCatalog();
+        loadIndexCatalog();
     }
 
     /**
@@ -84,6 +88,36 @@ public class Catalog {
     }
 
     /**
+     * 添加索引
+     */
+    public void addIndex(String tableName, String columnName) {
+        String key = tableName + "." + columnName;
+        indexes.put(key, key);
+        saveIndexCatalog();
+    }
+
+    /**
+     * 检查索引是否存在
+     */
+    public boolean indexExists(String tableName, String columnName) {
+        String key = tableName + "." + columnName;
+        return indexes.containsKey(key);
+    }
+
+    /**
+     * 获取表的所有索引列
+     */
+    public java.util.Set<String> getIndexedColumns(String tableName) {
+        java.util.Set<String> columns = new java.util.HashSet<>();
+        for (String key : indexes.keySet()) {
+            if (key.startsWith(tableName + ".")) {
+                columns.add(key.substring(tableName.length() + 1));
+            }
+        }
+        return columns;
+    }
+
+    /**
      * 加载目录
      */
     private void loadCatalog() {
@@ -122,6 +156,39 @@ public class Catalog {
 
     public RecordManager getRecordManager() {
         return recordManager;
+    }
+
+    /**
+     * 加载索引目录
+     */
+    private void loadIndexCatalog() {
+        Path indexCatalogPath = Paths.get(dataDir, INDEX_CATALOG_FILE);
+        if (!Files.exists(indexCatalogPath)) {
+            return;
+        }
+
+        try (ObjectInputStream ois = new ObjectInputStream(
+                new FileInputStream(indexCatalogPath.toFile()))) {
+            @SuppressWarnings("unchecked")
+            Map<String, String> loaded = (Map<String, String>) ois.readObject();
+            indexes.putAll(loaded);
+        } catch (IOException | ClassNotFoundException e) {
+            // 如果加载失败，使用空目录
+            System.err.println("Failed to load index catalog: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 保存索引目录
+     */
+    private void saveIndexCatalog() {
+        Path indexCatalogPath = Paths.get(dataDir, INDEX_CATALOG_FILE);
+        try (ObjectOutputStream oos = new ObjectOutputStream(
+                new FileOutputStream(indexCatalogPath.toFile()))) {
+            oos.writeObject(indexes);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to save index catalog", e);
+        }
     }
 }
 

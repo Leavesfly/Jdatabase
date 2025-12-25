@@ -4,18 +4,22 @@ import com.jdatabase.catalog.Catalog;
 import com.jdatabase.common.Schema;
 import com.jdatabase.common.Tuple;
 import com.jdatabase.common.Value;
+import com.jdatabase.index.IndexManager;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 存储管理器，提供高级存储接口
  */
 public class StorageManager {
     private final Catalog catalog;
+    private final IndexManager indexManager;
 
-    public StorageManager(Catalog catalog) {
+    public StorageManager(Catalog catalog, IndexManager indexManager) {
         this.catalog = catalog;
+        this.indexManager = indexManager;
     }
 
     /**
@@ -31,7 +35,12 @@ public class StorageManager {
         validateTuple(schema, tuple);
         
         String fileName = tableName + ".dat";
-        return catalog.getRecordManager().insertRecord(fileName, schema, tuple);
+        RecordId recordId = catalog.getRecordManager().insertRecord(fileName, schema, tuple);
+        
+        // 更新索引
+        updateIndexesOnInsert(tableName, schema, tuple, recordId);
+        
+        return recordId;
     }
 
     /**
@@ -56,10 +65,16 @@ public class StorageManager {
             throw new RuntimeException("Table not found: " + tableName);
         }
         
+        // 读取旧值以更新索引
+        Tuple oldTuple = readTuple(tableName, recordId);
+        
         validateTuple(schema, newTuple);
         
         String fileName = tableName + ".dat";
         catalog.getRecordManager().updateRecord(fileName, schema, recordId, newTuple);
+        
+        // 更新索引
+        updateIndexesOnUpdate(tableName, schema, oldTuple, newTuple, recordId);
     }
 
     /**
@@ -71,8 +86,14 @@ public class StorageManager {
             throw new RuntimeException("Table not found: " + tableName);
         }
         
+        // 读取元组以更新索引
+        Tuple tuple = readTuple(tableName, recordId);
+        
         String fileName = tableName + ".dat";
         catalog.getRecordManager().deleteRecord(fileName, schema, recordId);
+        
+        // 更新索引
+        updateIndexesOnDelete(tableName, schema, tuple, recordId);
     }
 
     /**
@@ -111,6 +132,60 @@ public class StorageManager {
 
     public Catalog getCatalog() {
         return catalog;
+    }
+
+    /**
+     * 插入时更新索引
+     */
+    private void updateIndexesOnInsert(String tableName, Schema schema, Tuple tuple, RecordId recordId) throws IOException {
+        Set<String> indexedColumns = catalog.getIndexedColumns(tableName);
+        for (String columnName : indexedColumns) {
+            int colIndex = schema.getColumnIndex(columnName);
+            if (colIndex >= 0) {
+                Value value = tuple.getValue(colIndex);
+                if (value != null && value.getValue() != null) {
+                    indexManager.insert(tableName, columnName, (Comparable<?>) value.getValue(), recordId);
+                }
+            }
+        }
+    }
+
+    /**
+     * 更新时更新索引
+     */
+    private void updateIndexesOnUpdate(String tableName, Schema schema, Tuple oldTuple, Tuple newTuple, RecordId recordId) throws IOException {
+        Set<String> indexedColumns = catalog.getIndexedColumns(tableName);
+        for (String columnName : indexedColumns) {
+            int colIndex = schema.getColumnIndex(columnName);
+            if (colIndex >= 0) {
+                Value oldValue = oldTuple.getValue(colIndex);
+                Value newValue = newTuple.getValue(colIndex);
+                
+                // 如果值发生变化，更新索引
+                if (oldValue != null && oldValue.getValue() != null) {
+                    indexManager.delete(tableName, columnName, (Comparable<?>) oldValue.getValue());
+                }
+                if (newValue != null && newValue.getValue() != null) {
+                    indexManager.insert(tableName, columnName, (Comparable<?>) newValue.getValue(), recordId);
+                }
+            }
+        }
+    }
+
+    /**
+     * 删除时更新索引
+     */
+    private void updateIndexesOnDelete(String tableName, Schema schema, Tuple tuple, RecordId recordId) throws IOException {
+        Set<String> indexedColumns = catalog.getIndexedColumns(tableName);
+        for (String columnName : indexedColumns) {
+            int colIndex = schema.getColumnIndex(columnName);
+            if (colIndex >= 0) {
+                Value value = tuple.getValue(colIndex);
+                if (value != null && value.getValue() != null) {
+                    indexManager.delete(tableName, columnName, (Comparable<?>) value.getValue());
+                }
+            }
+        }
     }
 }
 

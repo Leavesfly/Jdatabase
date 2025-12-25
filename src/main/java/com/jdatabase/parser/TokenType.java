@@ -5,7 +5,7 @@ package com.jdatabase.parser;
  */
 public enum TokenType {
     // 关键字
-    CREATE, TABLE, INSERT, INTO, VALUES, SELECT, FROM, WHERE, UPDATE, SET, DELETE,
+    CREATE, TABLE, INDEX, INSERT, INTO, VALUES, SELECT, FROM, WHERE, UPDATE, SET, DELETE,
     JOIN, ON, INNER, LEFT, RIGHT, ORDER, BY, GROUP, HAVING, AS,
     AND, OR, NOT, NULL, IS,
     

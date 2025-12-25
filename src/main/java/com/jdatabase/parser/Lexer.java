@@ -17,6 +17,7 @@ public class Lexer {
     static {
         KEYWORDS.put("CREATE", TokenType.CREATE);
         KEYWORDS.put("TABLE", TokenType.TABLE);
+        KEYWORDS.put("INDEX", TokenType.INDEX);
         KEYWORDS.put("INSERT", TokenType.INSERT);
         KEYWORDS.put("INTO", TokenType.INTO);
         KEYWORDS.put("VALUES", TokenType.VALUES);

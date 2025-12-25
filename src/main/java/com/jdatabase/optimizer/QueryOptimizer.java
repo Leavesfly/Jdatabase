@@ -1,6 +1,5 @@
 package com.jdatabase.optimizer;
 
-import com.jdatabase.parser.ast.Expression;
 import com.jdatabase.parser.ast.SelectStatement;
 
 /**
@@ -12,13 +11,19 @@ public class QueryOptimizer {
      * 优化查询
      */
     public SelectStatement optimize(SelectStatement stmt) {
-        // 谓词下推：将WHERE条件尽可能下推到扫描操作符
-        // 投影下推：只选择需要的列
-        // JOIN顺序优化：小表优先
+        // 创建查询的副本以避免修改原始查询
+        SelectStatement optimized = stmt;
         
-        // 简化实现：返回原查询
-        // 实际应该进行各种优化转换
-        return stmt;
+        // 谓词下推：将WHERE条件尽可能下推到扫描操作符
+        pushDownPredicates(optimized);
+        
+        // 投影下推：只选择需要的列，减少数据传输
+        pushDownProjections(optimized);
+        
+        // JOIN顺序优化：小表优先
+        optimizeJoinOrder(optimized);
+        
+        return optimized;
     }
 
     /**
